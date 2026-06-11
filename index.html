@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Meenu's Tracker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #263045;
+    --border: rgba(148,163,184,0.12);
+    --border2: rgba(148,163,184,0.22);
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --teal: #14b8a6;
+    --teal-dim: rgba(20,184,166,0.12);
+    --teal-border: rgba(20,184,166,0.3);
+    --amber: #f59e0b;
+    --amber-dim: rgba(245,158,11,0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.12);
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,0.12);
+    --blue: #3b82f6;
+    --blue-dim: rgba(59,130,246,0.12);
+    --pink: #ec4899;
+    --pink-dim: rgba(236,72,153,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  body { display: flex; flex-direction: column; max-width: 430px; margin: 0 auto; }
+
+  /* NAV */
+  .nav { display: flex; background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 0; flex-shrink: 0; }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px 8px; border: none; background: none; color: var(--text3); font-size: 10px; cursor: pointer; transition: color 0.15s; border-top: 2px solid transparent; }
+  .nav-btn.active { color: var(--teal); border-top-color: var(--teal); }
+  .nav-btn i { font-size: 20px; }
+
+  /* HEADER */
+  .header { background: var(--surface); padding: 14px 16px 12px; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
+  .header-top { display: flex; justify-content: space-between; align-items: center; }
+  .header-title { font-size: 17px; font-weight: 600; color: var(--text); }
+  .header-date { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .sync-btn { display: flex; align-items: center; gap: 6px; padding: 7px 13px; background: var(--teal-dim); border: 0.5px solid var(--teal-border); border-radius: 99px; color: var(--teal); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+  .sync-btn:active { transform: scale(0.97); }
+  .sync-btn i { font-size: 14px; }
+
+  /* PAGES */
+  .page { display: none; flex: 1; overflow-y: auto; padding: 14px 14px 20px; }
+  .page.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+  .card-title { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .card-title i { font-size: 14px; }
+
+  /* SUMMARY BAR */
+  .budget-hero { text-align: center; padding: 6px 0 14px; }
+  .budget-hero .spent { font-size: 36px; font-weight: 700; color: var(--text); letter-spacing: -1px; }
+  .budget-hero .budget-of { font-size: 13px; color: var(--text3); margin-top: 2px; }
+  .progress-wrap { margin: 10px 0 12px; }
+  .progress-track { height: 6px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease, background 0.3s; background: var(--teal); }
+  .progress-fill.warn { background: var(--amber); }
+  .progress-fill.over { background: var(--red); }
+  .progress-labels { display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; color: var(--text3); }
+  .stat-row { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+  .stat { background: var(--surface2); border-radius: var(--radius-sm); padding: 10px 12px; }
+  .stat-label { font-size: 11px; color: var(--text3); margin-bottom: 3px; }
+  .stat-val { font-size: 16px; font-weight: 600; }
+  .stat-val.green { color: var(--green); }
+  .stat-val.red { color: var(--red); }
+  .stat-val.amber { color: var(--amber); }
+
+  /* QUICK ADD */
+  .quick-add { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+  .qa-title { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .input-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  input[type=text], input[type=number], input[type=date], select {
+    background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 14px; padding: 9px 12px; font-family: inherit; width: 100%;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--teal); }
+  input[type=number] { text-align: right; }
+  .amount-field { width: 100px; flex-shrink: 0; }
+  .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tag-chip { padding: 5px 11px; border-radius: 99px; font-size: 12px; cursor: pointer; border: 0.5px solid var(--border2); color: var(--text3); background: var(--surface2); display: flex; align-items: center; gap: 4px; transition: all 0.15s; }
+  .tag-chip i { font-size: 13px; }
+  .tag-chip.sel-food { background: var(--teal-dim); color: var(--teal); border-color: var(--teal-border); }
+  .tag-chip.sel-transport { background: var(--blue-dim); color: var(--blue); border-color: rgba(59,130,246,0.3); }
+  .tag-chip.sel-shopping { background: var(--pink-dim); color: var(--pink); border-color: rgba(236,72,153,0.3); }
+  .tag-chip.sel-bills { background: var(--amber-dim); color: var(--amber); border-color: rgba(245,158,11,0.3); }
+  .tag-chip.sel-health { background: var(--red-dim); color: var(--red); border-color: rgba(239,68,68,0.3); }
+  .tag-chip.sel-other { background: rgba(148,163,184,0.1); color: var(--text2); border-color: var(--border2); }
+  .add-btn { width: 100%; padding: 11px; background: var(--teal); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s; }
+  .add-btn:active { background: #0d9488; transform: scale(0.98); }
+  .add-btn i { font-size: 16px; }
+
+  /* ENTRIES */
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .section-label { font-size: 13px; font-weight: 500; color: var(--text2); }
+  .clear-btn { font-size: 12px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 4px 8px; }
+  .clear-btn:hover { color: var(--red); }
+  .entry { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 0.5px solid var(--border); animation: fadeUp 0.2s ease; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+  .entry-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-food { background: var(--teal); }
+  .dot-transport { background: var(--blue); }
+  .dot-shopping { background: var(--pink); }
+  .dot-bills { background: var(--amber); }
+  .dot-health { background: var(--red); }
+  .dot-other { background: var(--text3); }
+  .entry-info { flex: 1; min-width: 0; }
+  .entry-desc { font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .entry-meta { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .entry-amt { font-size: 14px; font-weight: 600; color: var(--text); flex-shrink: 0; }
+  .entry-del { background: none; border: none; color: var(--text3); cursor: pointer; padding: 2px 4px; font-size: 16px; opacity: 0.5; display: flex; align-items: center; }
+  .entry-del:hover { opacity: 1; color: var(--red); }
+  .empty { text-align: center; padding: 24px 0 12px; color: var(--text3); font-size: 13px; }
+
+  /* ACCOUNTS PAGE */
+  .accounts-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin-bottom: 10px; }
+  .acct-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .acct-name { font-size: 12px; color: var(--text3); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
+  .acct-edit-btn { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 14px; display: flex; }
+  .acct-balance { font-size: 22px; font-weight: 700; color: var(--green); letter-spacing: -0.5px; }
+  .acct-balance.negative { color: var(--red); }
+  .acct-label { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .acct-total { background: var(--teal-dim); border: 0.5px solid var(--teal-border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .acct-total-label { font-size: 13px; color: var(--teal); }
+  .acct-total-val { font-size: 20px; font-weight: 700; color: var(--teal); }
+
+  /* CREDIT PAGE */
+  .credit-card-vis { background: linear-gradient(135deg, #1e293b 0%, #263045 100%); border: 0.5px solid var(--border2); border-radius: 16px; padding: 20px 20px 16px; margin-bottom: 10px; position: relative; overflow: hidden; }
+  .credit-card-vis::before { content:''; position:absolute; top:-30px; right:-30px; width:120px; height:120px; border-radius:50%; background: rgba(20,184,166,0.08); }
+  .credit-card-name { font-size: 12px; color: var(--text3); margin-bottom: 16px; }
+  .credit-limit-label { font-size: 11px; color: var(--text3); }
+  .credit-limit-val { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -1px; }
+  .credit-used-row { display: flex; justify-content: space-between; margin-top: 12px; }
+  .credit-used-item { }
+  .credit-used-label { font-size: 10px; color: var(--text3); }
+  .credit-used-val { font-size: 14px; font-weight: 600; }
+  .credit-progress-wrap { margin-top: 10px; }
+  .credit-track { height: 4px; background: rgba(148,163,184,0.15); border-radius: 99px; overflow: hidden; }
+  .credit-fill { height: 100%; border-radius: 99px; background: var(--teal); transition: width 0.4s, background 0.3s; }
+  .credit-fill.warn { background: var(--amber); }
+  .credit-fill.over { background: var(--red); }
+
+  /* MODAL */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: flex-end; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 20px 18px 32px; width: 100%; max-width: 430px; animation: slideUp 0.25s ease; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-close { background: none; border: none; color: var(--text3); font-size: 22px; cursor: pointer; display: flex; }
+  .modal-row { margin-bottom: 10px; }
+  .modal-label { font-size: 12px; color: var(--text3); margin-bottom: 5px; }
+  .modal-btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+  .modal-btn.primary { background: var(--teal); color: #fff; }
+  .modal-btn.danger { background: var(--red-dim); color: var(--red); border: 0.5px solid rgba(239,68,68,0.3); margin-top: 8px; }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 99px; padding: 10px 20px; font-size: 13px; color: var(--text); opacity: 0; transition: all 0.25s; pointer-events: none; white-space: nowrap; z-index: 200; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: rgba(34,197,94,0.4); color: var(--green); }
+  .toast.error { border-color: rgba(239,68,68,0.4); color: var(--red); }
+
+  /* BUDGET INPUT ROW */
+  .budget-cfg { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .budget-cfg label { font-size: 12px; color: var(--text3); flex-shrink: 0; }
+  .budget-cfg select { width: auto; flex-shrink: 0; }
+  .budget-cfg input { flex: 1; }
+
+  /* TX LOG IN ACCOUNTS */
+  .tx-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 0.5px solid var(--border); }
+  .tx-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .tx-dot.dep { background: var(--green); }
+  .tx-dot.with { background: var(--red); }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-desc { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-date { font-size: 11px; color: var(--text3); }
+  .tx-amt { font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .tx-amt.dep { color: var(--green); }
+  .tx-amt.with { color: var(--red); }
+  .tx-del { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 15px; opacity: 0.5; display: flex; }
+  .tx-del:hover { opacity: 1; color: var(--red); }
+
+  .tab-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .tab { flex: 1; padding: 8px; background: var(--surface2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; color: var(--text3); cursor: pointer; text-align: center; }
+  .tab.active { background: var(--teal-dim); border-color: var(--teal-border); color: var(--teal); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="header-title">Meenu's Tracker</div>
+      <div class="header-date" id="headerDate"></div>
+    </div>
+    <button class="sync-btn" id="syncBtn"><i class="ti ti-brand-google-drive"></i> Sync to Sheets</button>
+  </div>
+</div>
+
+<!-- PAGES -->
+<div class="page active" id="page-expenses">
+  <!-- Budget config -->
+  <div class="card" style="margin-bottom:10px;">
+    <div class="budget-cfg">
+      <label>Daily budget</label>
+      <select id="currencySelect">
+        <option value="LKR">LKR</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+      </select>
+      <input type="number" id="budgetInput" placeholder="5000" style="text-align:right;" />
+    </div>
+    <div class="budget-hero">
+      <div class="spent" id="spentDisplay">Rs 0</div>
+      <div class="budget-of" id="budgetOf">of Rs 5,000 daily budget</div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="progress-labels"><span id="pctLabel">0% used</span><span id="remainLabel">Rs 5,000 left</span></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="stat-label">Remaining</div><div class="stat-val green" id="remainStat">Rs 5,000</div></div>
+      <div class="stat"><div class="stat-label">Transactions</div><div class="stat-val" id="txCountStat">0</div></div>
+    </div>
+  </div>
+
+  <!-- Quick add -->
+  <div class="quick-add">
+    <div class="qa-title">Add expense</div>
+    <div class="input-row">
+      <input type="text" id="descInput" placeholder="What did you spend on?" style="flex:1;" maxlength="40" />
+      <input type="number" id="amountInput" placeholder="0" class="amount-field" min="0" />
+    </div>
+    <div class="tag-row" id="tagRow">
+      <div class="tag-chip" data-tag="food"><i class="ti ti-soup"></i>Food</div>
+      <div class="tag-chip" data-tag="transport"><i class="ti ti-bus"></i>Transport</div>
+      <div class="tag-chip" data-tag="shopping"><i class="ti ti-shopping-bag"></i>Shopping</div>
+      <div class="tag-chip" data-tag="bills"><i class="ti ti-receipt"></i>Bills</div>
+      <div class="tag-chip" data-tag="health"><i class="ti ti-heart"></i>Health</div>
+      <div class="tag-chip" data-tag="other"><i class="ti ti-dots"></i>Other</div>
+    </div>
+    <button class="add-btn" id="addExpenseBtn"><i class="ti ti-plus"></i>Add expense</button>
+  </div>
+
+  <!-- Entries -->
+  <div class="section-header">
+    <span class="section-label">Today's expenses</span>
+    <button class="clear-btn" id="clearExpensesBtn">Clear all</button>
+  </div>
+  <div id="expensesList"></div>
+</div>
+
+<div class="page" id="page-accounts">
+  <!-- Account totals -->
+  <div class="acct-total">
+    <span class="acct-total-label"><i class="ti ti-wallet" style="vertical-align:-2px;margin-right:4px;"></i>Total savings</span>
+    <span class="acct-total-val" id="totalSavings">Rs 0</span>
+  </div>
+  <div class="accounts-grid">
+    <div class="acct-card" id="acct0card">
+      <div class="acct-name"><span id="acct0name">Account 1</span><button class="acct-edit-btn" data-acct="0"><i class="ti ti-pencil"></i></button></div>
+      <div class="acct-balance" id="acct0bal">Rs 0</div>
+      <div class="acct-label">available</div>
+    </div>
+    <div class="acct-card" id="acct1card">
+      <div class="acct-name"><span id="acct1name">Account 2</span><button class="acct-edit-btn" data-acct="1"><i class="ti ti-pencil"></i></button></div>
+      <div class="acct-balance" id="acct1bal">Rs 0</div>
+      <div class="acct-label">available</div>
+    </div>
+  </div>
+
+  <!-- Log transaction -->
+  <div class="card">
+    <div class="card-title"><i class="ti ti-plus-minus"></i>Log transaction</div>
+    <div class="tab-row">
+      <div class="tab active" data-tx="deposit" id="tabDeposit">Deposit</div>
+      <div class="tab" data-tx="withdrawal" id="tabWithdrawal">Withdrawal</div>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Account</div>
+      <select id="txAccount">
+        <option value="0">Account 1</option>
+        <option value="1">Account 2</option>
+      </select>
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Description</div>
+      <input type="text" id="txDesc" placeholder="e.g. Salary, ATM withdrawal..." maxlength="40" />
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Amount</div>
+      <input type="number" id="txAmount" placeholder="0" min="0" />
+    </div>
+    <button class="add-btn" id="addTxBtn" style="margin-top:4px;"><i class="ti ti-check"></i>Log transaction</button>
+  </div>
+
+  <!-- Transaction history -->
+  <div class="section-header">
+    <span class="section-label">Transaction history</span>
+    <button class="clear-btn" id="clearTxBtn">Clear all</button>
+  </div>
+  <div id="txList"></div>
+</div>
+
+<div class="page" id="page-credit">
+  <!-- Credit card visual -->
+  <div class="credit-card-vis" id="creditVis">
+    <div class="credit-card-name" id="creditCardName">My Credit Card</div>
+    <div class="credit-limit-label">Credit limit</div>
+    <div class="credit-limit-val" id="creditLimitDisplay">Rs 0</div>
+    <div class="credit-used-row">
+      <div class="credit-used-item">
+        <div class="credit-used-label">Used</div>
+        <div class="credit-used-val" style="color:var(--red)" id="creditUsedDisplay">Rs 0</div>
+      </div>
+      <div class="credit-used-item" style="text-align:right;">
+        <div class="credit-used-label">Available</div>
+        <div class="credit-used-val" style="color:var(--teal)" id="creditAvailDisplay">Rs 0</div>
+      </div>
+    </div>
+    <div class="credit-progress-wrap">
+      <div class="credit-track"><div class="credit-fill" id="creditFill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- Edit credit settings -->
+  <div class="card">
+    <div class="card-title"><i class="ti ti-settings"></i>Credit card settings</div>
+    <div class="modal-row">
+      <div class="modal-label">Card name</div>
+      <input type="text" id="creditNameInput" placeholder="e.g. Sampath Visa" maxlength="30" />
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Credit limit</div>
+      <input type="number" id="creditLimitInput" placeholder="0" min="0" />
+    </div>
+    <div class="modal-row">
+      <div class="modal-label">Current balance used</div>
+      <input type="number" id="creditUsedInput" placeholder="0" min="0" />
+    </div>
+    <button class="add-btn" id="saveCreditBtn" style="margin-top:4px;"><i class="ti ti-check"></i>Save</button>
+  </div>
+</div>
+
+<!-- NAV BAR -->
+<nav class="nav">
+  <button class="nav-btn active" data-page="expenses"><i class="ti ti-home"></i>Expenses</button>
+  <button class="nav-btn" data-page="accounts"><i class="ti ti-piggy-bank"></i>Savings</button>
+  <button class="nav-btn" data-page="credit"><i class="ti ti-credit-card"></i>Credit</button>
+</nav>
+
+<!-- ACCOUNT EDIT MODAL -->
+<div class="modal-bg" id="acctModal">
+  <div class="modal">
+    <div class="modal-title"><span>Edit account</span><button class="modal-close" id="acctModalClose"><i class="ti ti-x"></i></button></div>
+    <div class="modal-row"><div class="modal-label">Account name</div><input type="text" id="acctNameInput" maxlength="20" /></div>
+    <button class="modal-btn primary" id="saveAcctBtn">Save</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBxsa_on_q4fP5SEnQ-_W4f2lWN78tyVtY",
+  authDomain: "meenu-s-tracker.firebaseapp.com",
+  projectId: "meenu-s-tracker",
+  storageBucket: "meenu-s-tracker.firebasestorage.app",
+  messagingSenderId: "557193851688",
+  appId: "1:557193851688:web:8d713c0972c187bd5b961d"
+};
+
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw2OvTPUUxJHUrzcTDNj-yizhMEwW26bNVhd4AHdVTwWo2mk9fSeJ-mlL5CdjsZlfjxYg/exec';
+const DOC_ID = 'main';
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const TODAY = new Date().toISOString().slice(0, 10);
+
+let state = {
+  budget: 5000,
+  currency: 'LKR',
+  expenses: [],
+  accounts: [
+    { name: 'Account 1', transactions: [] },
+    { name: 'Account 2', transactions: [] }
+  ],
+  credit: { name: 'My Credit Card', limit: 0, used: 0 }
+};
+
+const SYMS = { LKR: 'Rs', USD: '$', EUR: '€', GBP: '£' };
+function sym() { return SYMS[state.currency] || state.currency; }
+function fmt(n) { return Math.round(n).toLocaleString(); }
+function money(n) { return sym() + ' ' + fmt(n); }
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+async function saveToFirebase() {
+  try {
+    await setDoc(doc(db, 'tracker', DOC_ID), state);
+  } catch(e) { showToast('Sync error — check connection', 'error'); }
+}
+
+function todayExpenses() {
+  return state.expenses.filter(e => e.date === TODAY);
+}
+
+function renderExpenses() {
+  const expenses = todayExpenses();
+  const total = expenses.reduce((s, e) => s + e.amount, 0);
+  const budget = state.budget;
+  const remaining = budget - total;
+  const pct = budget > 0 ? Math.min((total / budget) * 100, 100) : 0;
+
+  document.getElementById('spentDisplay').textContent = money(total);
+  document.getElementById('budgetOf').textContent = 'of ' + money(budget) + ' daily budget';
+  document.getElementById('budgetInput').value = budget;
+  document.getElementById('currencySelect').value = state.currency;
+
+  const fill = document.getElementById('progressFill');
+  fill.style.width = pct.toFixed(1) + '%';
+  fill.className = 'progress-fill' + (pct >= 100 ? ' over' : pct >= 80 ? ' warn' : '');
+
+  document.getElementById('pctLabel').textContent = Math.round(pct) + '% used';
+  document.getElementById('remainLabel').textContent = money(Math.max(remaining, 0)) + ' left';
+
+  const remEl = document.getElementById('remainStat');
+  remEl.textContent = money(Math.max(remaining, 0));
+  remEl.className = 'stat-val' + (remaining < 0 ? ' red' : remaining < budget * 0.2 ? ' amber' : ' green');
+  document.getElementById('txCountStat').textContent = expenses.length;
+
+  const list = document.getElementById('expensesList');
+  if (expenses.length === 0) {
+    list.innerHTML = '<div class="empty">No expenses today — add one above</div>';
+    return;
+  }
+  list.innerHTML = '';
+  [...expenses].reverse().forEach((e, ri) => {
+    const realIdx = state.expenses.findLastIndex((ex, i) => ex === expenses[expenses.length - 1 - ri]);
+    const div = document.createElement('div');
+    div.className = 'entry';
+    div.innerHTML = `
+      <div class="entry-dot dot-${e.tag}"></div>
+      <div class="entry-info">
+        <div class="entry-desc">${e.desc || 'Expense'}</div>
+        <div class="entry-meta">${e.tag} · ${e.time || ''}</div>
+      </div>
+      <div class="entry-amt">${money(e.amount)}</div>
+      <button class="entry-del" data-id="${e.id}"><i class="ti ti-x"></i></button>
+    `;
+    list.appendChild(div);
+  });
+  list.querySelectorAll('.entry-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.expenses = state.expenses.filter(e => e.id !== btn.dataset.id);
+      saveToFirebase(); renderExpenses();
+    });
+  });
+}
+
+function acctBalance(acct) {
+  return acct.transactions.reduce((s, t) => s + (t.type === 'deposit' ? t.amount : -t.amount), 0);
+}
+
+function renderAccounts() {
+  state.accounts.forEach((acct, i) => {
+    document.getElementById('acct'+i+'name').textContent = acct.name;
+    document.getElementById('txAccount').options[i].text = acct.name;
+    const bal = acctBalance(acct);
+    const el = document.getElementById('acct'+i+'bal');
+    el.textContent = money(bal);
+    el.className = 'acct-balance' + (bal < 0 ? ' negative' : '');
+  });
+  const total = state.accounts.reduce((s, a) => s + acctBalance(a), 0);
+  document.getElementById('totalSavings').textContent = money(total);
+
+  const list = document.getElementById('txList');
+  const allTx = state.accounts.flatMap((a, ai) => a.transactions.map(t => ({ ...t, acctName: a.name, acctIdx: ai })))
+    .sort((a, b) => b.ts - a.ts);
+  if (allTx.length === 0) { list.innerHTML = '<div class="empty">No transactions yet</div>'; return; }
+  list.innerHTML = '';
+  allTx.forEach(tx => {
+    const div = document.createElement('div');
+    div.className = 'tx-item';
+    div.innerHTML = `
+      <div class="tx-dot ${tx.type === 'deposit' ? 'dep' : 'with'}"></div>
+      <div class="tx-info">
+        <div class="tx-desc">${tx.desc || tx.type}</div>
+        <div class="tx-date">${tx.acctName} · ${tx.date || ''}</div>
+      </div>
+      <div class="tx-amt ${tx.type === 'deposit' ? 'dep' : 'with'}">${tx.type === 'deposit' ? '+' : '-'}${money(tx.amount)}</div>
+      <button class="tx-del" data-acct="${tx.acctIdx}" data-id="${tx.id}"><i class="ti ti-x"></i></button>
+    `;
+    list.appendChild(div);
+  });
+  list.querySelectorAll('.tx-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ai = parseInt(btn.dataset.acct);
+      state.accounts[ai].transactions = state.accounts[ai].transactions.filter(t => t.id !== btn.dataset.id);
+      saveToFirebase(); renderAccounts();
+    });
+  });
+}
+
+function renderCredit() {
+  const c = state.credit;
+  document.getElementById('creditCardName').textContent = c.name || 'My Credit Card';
+  document.getElementById('creditLimitDisplay').textContent = money(c.limit);
+  document.getElementById('creditUsedDisplay').textContent = money(c.used);
+  document.getElementById('creditAvailDisplay').textContent = money(Math.max(c.limit - c.used, 0));
+  document.getElementById('creditNameInput').value = c.name || '';
+  document.getElementById('creditLimitInput').value = c.limit || '';
+  document.getElementById('creditUsedInput').value = c.used || '';
+  const pct = c.limit > 0 ? Math.min((c.used / c.limit) * 100, 100) : 0;
+  const fill = document.getElementById('creditFill');
+  fill.style.width = pct.toFixed(1) + '%';
+  fill.className = 'credit-fill' + (pct >= 90 ? ' over' : pct >= 70 ? ' warn' : '');
+}
+
+function renderAll() { renderExpenses(); renderAccounts(); renderCredit(); }
+
+// NAV
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('page-' + btn.dataset.page).classList.add('active');
+  });
+});
+
+// DATE
+const now = new Date();
+document.getElementById('headerDate').textContent = now.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+
+// BUDGET
+document.getElementById('budgetInput').addEventListener('input', () => {
+  const v = parseFloat(document.getElementById('budgetInput').value);
+  if (!isNaN(v) && v >= 0) { state.budget = v; saveToFirebase(); renderExpenses(); }
+});
+document.getElementById('currencySelect').addEventListener('change', () => {
+  state.currency = document.getElementById('currencySelect').value;
+  saveToFirebase(); renderAll();
+});
+
+// TAGS
+let selectedTag = null;
+document.querySelectorAll('.tag-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const tag = chip.dataset.tag;
+    document.querySelectorAll('.tag-chip').forEach(c => c.className = 'tag-chip');
+    if (selectedTag === tag) { selectedTag = null; return; }
+    chip.classList.add('sel-' + tag);
+    selectedTag = tag;
+  });
+});
+
+// ADD EXPENSE
+document.getElementById('addExpenseBtn').addEventListener('click', () => {
+  const desc = document.getElementById('descInput').value.trim();
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  if (!desc) { document.getElementById('descInput').focus(); return; }
+  if (isNaN(amount) || amount <= 0) { document.getElementById('amountInput').focus(); return; }
+  const timeStr = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+  state.expenses.push({ id: Date.now().toString(), desc, amount, tag: selectedTag || 'other', date: TODAY, time: timeStr });
+  document.getElementById('descInput').value = '';
+  document.getElementById('amountInput').value = '';
+  selectedTag = null;
+  document.querySelectorAll('.tag-chip').forEach(c => c.className = 'tag-chip');
+  saveToFirebase(); renderExpenses();
+  showToast('Expense added', 'success');
+});
+
+['descInput','amountInput'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('addExpenseBtn').click(); });
+});
+
+document.getElementById('clearExpensesBtn').addEventListener('click', () => {
+  state.expenses = state.expenses.filter(e => e.date !== TODAY);
+  saveToFirebase(); renderExpenses();
+});
+
+// TX TABS
+let txType = 'deposit';
+document.querySelectorAll('[data-tx]').forEach(tab => {
+  tab.addEventListener('click', () => {
+    txType = tab.dataset.tx;
+    document.querySelectorAll('[data-tx]').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+  });
+});
+
+// ADD TX
+document.getElementById('addTxBtn').addEventListener('click', () => {
+  const acctIdx = parseInt(document.getElementById('txAccount').value);
+  const desc = document.getElementById('txDesc').value.trim();
+  const amount = parseFloat(document.getElementById('txAmount').value);
+  if (isNaN(amount) || amount <= 0) { document.getElementById('txAmount').focus(); return; }
+  const dateStr = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  state.accounts[acctIdx].transactions.push({ id: Date.now().toString(), type: txType, desc: desc || txType, amount, date: dateStr, ts: Date.now() });
+  document.getElementById('txDesc').value = '';
+  document.getElementById('txAmount').value = '';
+  saveToFirebase(); renderAccounts();
+  showToast((txType === 'deposit' ? 'Deposit' : 'Withdrawal') + ' logged', 'success');
+});
+
+document.getElementById('clearTxBtn').addEventListener('click', () => {
+  state.accounts.forEach(a => a.transactions = []);
+  saveToFirebase(); renderAccounts();
+});
+
+// ACCOUNT EDIT MODAL
+let editingAcct = null;
+document.querySelectorAll('.acct-edit-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    editingAcct = parseInt(btn.dataset.acct);
+    document.getElementById('acctNameInput').value = state.accounts[editingAcct].name;
+    document.getElementById('acctModal').classList.add('open');
+  });
+});
+document.getElementById('acctModalClose').addEventListener('click', () => document.getElementById('acctModal').classList.remove('open'));
+document.getElementById('saveAcctBtn').addEventListener('click', () => {
+  const name = document.getElementById('acctNameInput').value.trim();
+  if (!name) return;
+  state.accounts[editingAcct].name = name;
+  document.getElementById('acctModal').classList.remove('open');
+  saveToFirebase(); renderAccounts();
+});
+
+// CREDIT SAVE
+document.getElementById('saveCreditBtn').addEventListener('click', () => {
+  state.credit.name = document.getElementById('creditNameInput').value.trim() || 'My Credit Card';
+  state.credit.limit = parseFloat(document.getElementById('creditLimitInput').value) || 0;
+  state.credit.used = parseFloat(document.getElementById('creditUsedInput').value) || 0;
+  saveToFirebase(); renderCredit();
+  showToast('Credit card saved', 'success');
+});
+
+// SYNC TO SHEETS
+document.getElementById('syncBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('syncBtn');
+  btn.innerHTML = '<i class="ti ti-loader-2 ti-spin"></i> Syncing...';
+  try {
+    const expenses = state.expenses.map(e => [e.date, e.desc, e.amount, e.tag, e.time || '']);
+    const accounts = state.accounts.map(a => [a.name, money(acctBalance(a)), new Date().toLocaleDateString()]);
+    const cards = [[state.credit.name, state.credit.limit, state.credit.used, Math.max(state.credit.limit - state.credit.used, 0), new Date().toLocaleDateString()]];
+
+    await fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ type:'expenses', expenses }), mode:'no-cors' });
+    await fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ type:'accounts', accounts }), mode:'no-cors' });
+    await fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ type:'credit', cards }), mode:'no-cors' });
+
+    showToast('Synced to Google Sheets ✓', 'success');
+  } catch(e) {
+    showToast('Sync failed — try again', 'error');
+  }
+  btn.innerHTML = '<i class="ti ti-brand-google-drive"></i> Sync to Sheets';
+});
+
+// LOAD FROM FIREBASE + LIVE SYNC
+const docRef = doc(db, 'tracker', DOC_ID);
+onSnapshot(docRef, snap => {
+  if (snap.exists()) {
+    const data = snap.data();
+    state = { ...state, ...data };
+    if (!state.accounts || state.accounts.length < 2) {
+      state.accounts = [{ name:'Account 1', transactions:[] }, { name:'Account 2', transactions:[] }];
+    }
+  }
+  renderAll();
+});
+</script>
+</body>
+</html>
