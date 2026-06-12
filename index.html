@@ -275,6 +275,7 @@ input[type=number]{text-align:right;}
     <button class="add-btn" id="addTxBtn" style="margin-top:4px;"><i class="ti ti-check"></i>Log transaction</button>
   </div>
   <div class="section-header"><span class="section-label">Transaction history</span><button class="clear-btn" id="clearTxBtn">Clear all</button></div>
+  <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;" id="txFilterRow"></div>
   <div id="txList"></div>
 </div>
 
@@ -327,7 +328,7 @@ input[type=number]{text-align:right;}
 
 <nav class="nav">
   <button class="nav-btn active" data-page="expenses"><i class="ti ti-home"></i>Expenses</button>
-  <button class="nav-btn" data-page="accounts"><i class="ti ti-piggy-bank"></i>Savings</button>
+  <button class="nav-btn" data-page="accounts"><span style="font-size:18px;line-height:1;">🏦</span>Savings</button>
   <button class="nav-btn" data-page="credit"><i class="ti ti-credit-card"></i>Credit</button>
   <button class="nav-btn" data-page="metrics"><i class="ti ti-chart-bar"></i>Metrics</button>
 </nav>
@@ -413,15 +414,19 @@ function acctBalance(acct){return acct.transactions.reduce((s,t)=>s+(t.type==='d
 function expensesBySource(id){return state.expenses.filter(e=>e.source===id).reduce((s,e)=>s+e.amount,0);}
 function ccTotalUsed(){return(state.credit.baseUsed||0)+expensesBySource('cc');}
 
+let txFilterAcct='all'; // 'all' or account id
+
 // ── SPEND TILES ──
 function renderSpendTiles(){
   const wrap=document.getElementById('spendTiles');
   wrap.innerHTML='';
   state.accounts.forEach((a,i)=>{
     const color=`var(${acctColor(i)})`;
+    // match expenses by id OR by name (for migrated data)
+    const spent=state.expenses.filter(e=>e.source===a.id||(e.source&&e.source!=='cc'&&e.source!=='transfer'&&acctById(e.source)===undefined&&state.accounts.find(x=>x.id===e.source)===undefined&&e.sourceName===a.name)).reduce((s,e)=>s+e.amount,0);
     const div=document.createElement('div');
     div.className='acct-spend-tile';
-    div.innerHTML=`<div class="acct-spend-label">${a.name}</div><div class="acct-spend-val" style="color:${color}">${money(expensesBySource(a.id))}</div><div class="acct-spend-sub">spent</div>`;
+    div.innerHTML=`<div class="acct-spend-label">${a.name}</div><div class="acct-spend-val" style="color:${color}">${money(spent)}</div><div class="acct-spend-sub">spent</div>`;
     wrap.appendChild(div);
   });
   const cc=document.createElement('div');
@@ -566,6 +571,44 @@ document.getElementById('saveEditBtn').addEventListener('click',()=>{
 });
 
 // ── RENDER ACCOUNTS ──
+function renderTxFilterRow(){
+  const row=document.getElementById('txFilterRow');
+  row.innerHTML='';
+  const chips=[{id:'all',label:'All accounts'},...state.accounts.map(a=>({id:a.id,label:a.name}))];
+  chips.forEach(c=>{
+    const chip=document.createElement('div');
+    chip.style.cssText='padding:6px 14px;border-radius:99px;font-size:12px;cursor:pointer;border:0.5px solid;white-space:nowrap;flex-shrink:0;';
+    if(txFilterAcct===c.id){chip.style.background='var(--teal-dim)';chip.style.color='var(--teal)';chip.style.borderColor='var(--teal-border)';}
+    else{chip.style.background='var(--surface2)';chip.style.color='var(--text3)';chip.style.borderColor='var(--border2)';}
+    chip.textContent=c.label;
+    chip.addEventListener('click',()=>{txFilterAcct=c.id;renderTxFilterRow();renderTxList();});
+    row.appendChild(chip);
+  });
+}
+function renderTxList(){
+  const txList=document.getElementById('txList');
+  let allTx=state.accounts.flatMap((a,ai)=>a.transactions.map(t=>({...t,acctName:a.name,acctIdx:ai,acctId:a.id}))).sort((a,b)=>b.ts-a.ts);
+  if(txFilterAcct!=='all')allTx=allTx.filter(t=>t.acctId===txFilterAcct);
+  if(!allTx.length){txList.innerHTML='<div class="empty">No transactions yet</div>';return;}
+  txList.innerHTML='';
+  allTx.forEach(tx=>{
+    const isXfer=tx.type==='transfer';
+    const div=document.createElement('div');div.className='tx-item';
+    div.innerHTML=`
+      <div class="tx-dot ${isXfer?'xfer':tx.type==='deposit'?'dep':'with'}"></div>
+      <div class="tx-info"><div class="tx-desc">${isXfer?'🔄 ':''}${tx.desc||tx.type}</div><div class="tx-date">${tx.acctName} · ${tx.date||''}</div></div>
+      <div class="tx-amt ${isXfer?'xfer':tx.type==='deposit'?'dep':'with'}">${tx.type==='withdrawal'?'-':'+'}${money(tx.amount)}</div>
+      <button class="tx-del" data-acct="${tx.acctId}" data-id="${tx.id}"><i class="ti ti-x"></i></button>`;
+    txList.appendChild(div);
+  });
+  txList.querySelectorAll('.tx-del').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const acct=acctById(btn.dataset.acct);
+      if(acct)acct.transactions=acct.transactions.filter(t=>t.id!==btn.dataset.id);
+      save();renderAccounts();
+    });
+  });
+}
 function renderAccounts(){
   const list=document.getElementById('acctsList');
   list.innerHTML='';
@@ -611,27 +654,8 @@ function renderAccounts(){
 
   document.getElementById('totalSavings').textContent=money(state.accounts.reduce((s,a)=>s+acctBalance(a),0));
 
-  const txList=document.getElementById('txList');
-  const allTx=state.accounts.flatMap((a,ai)=>a.transactions.map(t=>({...t,acctName:a.name,acctIdx:ai,acctId:a.id}))).sort((a,b)=>b.ts-a.ts);
-  if(!allTx.length){txList.innerHTML='<div class="empty">No transactions yet</div>';return;}
-  txList.innerHTML='';
-  allTx.forEach(tx=>{
-    const isXfer=tx.type==='transfer';
-    const div=document.createElement('div');div.className='tx-item';
-    div.innerHTML=`
-      <div class="tx-dot ${isXfer?'xfer':tx.type==='deposit'?'dep':'with'}"></div>
-      <div class="tx-info"><div class="tx-desc">${isXfer?'🔄 ':''}${tx.desc||tx.type}</div><div class="tx-date">${tx.acctName} · ${tx.date||''}</div></div>
-      <div class="tx-amt ${isXfer?'xfer':tx.type==='deposit'?'dep':'with'}">${tx.type==='withdrawal'?'-':'+'}${money(tx.amount)}</div>
-      <button class="tx-del" data-acct="${tx.acctId}" data-id="${tx.id}"><i class="ti ti-x"></i></button>`;
-    txList.appendChild(div);
-  });
-  txList.querySelectorAll('.tx-del').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const acct=acctById(btn.dataset.acct);
-      if(acct)acct.transactions=acct.transactions.filter(t=>t.id!==btn.dataset.id);
-      save();renderAccounts();
-    });
-  });
+  renderTxFilterRow();
+  renderTxList();
 }
 
 // ── RENDER CREDIT ──
@@ -762,7 +786,8 @@ document.getElementById('addExpenseBtn').addEventListener('click',()=>{
   if(!selectedSource){showToast('Choose which account to pay from','error');return;}
   const id=Date.now().toString();
   const timeStr=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-  state.expenses.push({id,desc,amount,tag:selectedTag||'other',source:selectedSource,time:timeStr,date:new Date().toISOString().slice(0,10)});
+  const srcName=selectedSource==='cc'?(state.credit.name||'Credit Card'):acctById(selectedSource)?.name||'';
+  state.expenses.push({id,desc,amount,tag:selectedTag||'other',source:selectedSource,sourceName:srcName,time:timeStr,date:new Date().toISOString().slice(0,10)});
   if(selectedSource!=='cc'){
     const acct=acctById(selectedSource);
     if(acct)acct.transactions.push({id:'exp-'+id,type:'withdrawal',desc,amount,date:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric'}),ts:Date.now()});
@@ -870,9 +895,21 @@ onSnapshot(doc(db,'tracker','main'),snap=>{
     const data=snap.data();
     state={...state,...data};
     if(!state.accounts?.length)state.accounts=[{id:'a0',name:'Account 1',transactions:[]},{id:'a1',name:'Account 2',transactions:[]}];
+    // ensure every account has a stable id
     state.accounts.forEach(a=>{if(!a.id)a.id='a'+Math.random().toString(36).slice(2);});
     if(!state.credit)state.credit={name:'My Credit Card',limit:0,baseUsed:0};
     if(!state.customTags)state.customTags=[];
+    // migrate any expenses whose source id no longer exists — match by stored sourceName or position
+    state.expenses.forEach(e=>{
+      if(e.source==='cc'||e.source==='transfer')return;
+      const exists=state.accounts.find(a=>a.id===e.source);
+      if(!exists){
+        // try match by sourceName saved at expense creation time
+        const byName=e.sourceName?state.accounts.find(a=>a.name===e.sourceName):null;
+        if(byName)e.source=byName.id;
+        else if(state.accounts.length>0)e.source=state.accounts[0].id;
+      }
+    });
   }
   renderAll();
   if(document.getElementById('page-metrics').classList.contains('active')){populateCompareSelects();renderMetrics();}
