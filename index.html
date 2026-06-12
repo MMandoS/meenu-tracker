@@ -298,6 +298,10 @@ input[type=number]{text-align:right;}
     <div class="modal-row"><div class="modal-label">Current balance used (before this app)</div><input type="number" id="creditUsedInput" placeholder="0" min="0"/></div>
     <button class="add-btn" id="saveCreditBtn" style="margin-top:4px;"><i class="ti ti-check"></i>Save settings</button>
   </div>
+  <div class="section-header">
+    <span class="section-label">Card transactions</span>
+  </div>
+  <div id="ccTxList"></div>
 </div>
 
 <!-- METRICS -->
@@ -672,6 +676,24 @@ function renderCredit(){
   const fill=document.getElementById('creditFill');
   fill.style.width=pct.toFixed(1)+'%';
   fill.className='credit-fill'+(pct>=90?' over':pct>=70?' warn':'');
+  renderCcTxList();
+}
+function renderCcTxList(){
+  const list=document.getElementById('ccTxList');
+  const ccExps=state.expenses.filter(e=>e.source==='cc').sort((a,b)=>new Date(b.date)-new Date(a.date)||b.time?.localeCompare(a.time||'')||0);
+  if(!ccExps.length){list.innerHTML='<div class="empty">No credit card transactions yet</div>';return;}
+  list.innerHTML='';
+  ccExps.forEach(e=>{
+    const div=document.createElement('div');div.className='tx-item';
+    div.innerHTML=`
+      <div class="tx-dot with"></div>
+      <div class="tx-info">
+        <div class="tx-desc">${e.desc||'Expense'}</div>
+        <div class="tx-date">${tagLabel(e.tag)} · ${e.date||''} ${e.time||''}</div>
+      </div>
+      <div class="tx-amt with">-${money(e.amount)}</div>`;
+    list.appendChild(div);
+  });
 }
 
 // ── METRICS ──
