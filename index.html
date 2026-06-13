@@ -608,8 +608,16 @@ function renderTxList(){
   txList.querySelectorAll('.tx-del').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const acct=acctById(btn.dataset.acct);
-      if(acct)acct.transactions=acct.transactions.filter(t=>t.id!==btn.dataset.id);
-      save();renderAccounts();
+      if(acct){
+        const tx=acct.transactions.find(t=>t.id===btn.dataset.id);
+        // if this tx was auto-created from an expense, also remove that expense
+        if(tx){
+          const linkedExpId=tx.id.startsWith('exp-')?tx.id.replace('exp-',''):null;
+          if(linkedExpId)state.expenses=state.expenses.filter(e=>e.id!==linkedExpId);
+        }
+        acct.transactions=acct.transactions.filter(t=>t.id!==btn.dataset.id);
+      }
+      save();renderAll();showToast('Transaction deleted','success');
     });
   });
 }
@@ -680,7 +688,7 @@ function renderCredit(){
 }
 function renderCcTxList(){
   const list=document.getElementById('ccTxList');
-  const ccExps=state.expenses.filter(e=>e.source==='cc').sort((a,b)=>new Date(b.date)-new Date(a.date)||b.time?.localeCompare(a.time||'')||0);
+  const ccExps=state.expenses.filter(e=>e.source==='cc').sort((a,b)=>new Date(b.date)-new Date(a.date)||0);
   if(!ccExps.length){list.innerHTML='<div class="empty">No credit card transactions yet</div>';return;}
   list.innerHTML='';
   ccExps.forEach(e=>{
@@ -691,8 +699,16 @@ function renderCcTxList(){
         <div class="tx-desc">${e.desc||'Expense'}</div>
         <div class="tx-date">${tagLabel(e.tag)} · ${e.date||''} ${e.time||''}</div>
       </div>
-      <div class="tx-amt with">-${money(e.amount)}</div>`;
+      <div class="tx-amt with">-${money(e.amount)}</div>
+      <button class="tx-del cc-exp-del" data-id="${e.id}"><i class="ti ti-x"></i></button>`;
     list.appendChild(div);
+  });
+  list.querySelectorAll('.cc-exp-del').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      state.expenses=state.expenses.filter(e=>e.id!==btn.dataset.id);
+      save();renderCredit();renderExpenses();
+      showToast('Transaction deleted','success');
+    });
   });
 }
 
